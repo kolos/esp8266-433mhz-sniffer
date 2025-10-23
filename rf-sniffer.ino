@@ -64,6 +64,7 @@ void setup() {
 
 void loop() {
   static unsigned long lastPulseTime = 0;
+  static unsigned long lastBurstEnd = 0;   // track when the last burst finished
 
   if (newPulse) {
     noInterrupts();
@@ -77,11 +78,20 @@ void loop() {
     lastPulseTime = micros();
   }
 
+  // Check for end of burst
   if (burstLen > 0 && (micros() - lastPulseTime > SYNC_GAP)) {
+    unsigned long now = micros();
+    unsigned long gap = (lastBurstEnd == 0) ? 0 : (now - lastBurstEnd);
+
     if (burstLen >= MIN_BURST_LEN) {
       if (burstsEqual(burst, burstLen, lastBurst, lastBurstLen)) {
         repeatCount++;
         if (repeatCount >= REPEAT_REQUIRED) {
+          // Print gap before this burst
+          Serial.print("GAP: ");
+          Serial.print(gap);
+          Serial.println(" us");
+
           // Print raw burst
           Serial.print("RAW: ");
           for (int i = 0; i < burstLen; i++) {
@@ -100,6 +110,9 @@ void loop() {
         repeatCount = 1;
       }
     }
+
+    // Reset for next burst
     burstLen = 0;
+    lastBurstEnd = now;
   }
 }
